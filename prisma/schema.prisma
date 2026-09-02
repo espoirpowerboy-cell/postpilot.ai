@@ -1,0 +1,275 @@
+// PostPilot AI — Database Schema
+// PostgreSQL database with all core models for the SaaS platform.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ─── User & Auth ─────────────────────────────────────────────
+
+model User {
+  id              String   @id @default(cuid())
+  supabaseUserId  String?  @unique @map("supabase_user_id")
+  email           String   @unique
+  name            String?
+  avatarUrl       String?  @map("avatar_url")
+  passwordHash    String?  @map("password_hash")
+  role            UserRole @default(MEMBER)
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  subscription   Subscription?
+  socialAccounts SocialAccount[]
+  posts          Post[]
+  comments       Comment[]
+  automations    AutomationRule[]
+  clients        Client[]
+  notifications  Notification[]
+
+  @@map("users")
+}
+
+enum UserRole {
+  OWNER
+  ADMIN
+  MEMBER
+}
+
+// ─── Subscription & Billing ──────────────────────────────────
+
+model Subscription {
+  id            String             @id @default(cuid())
+  userId        String             @unique @map("user_id")
+  plan          SubscriptionPlan   @default(FREE)
+  status        SubscriptionStatus @default(ACTIVE)
+  stripeSubId   String?            @unique @map("stripe_sub_id")
+  currentPeriodStart DateTime?     @map("current_period_start")
+  currentPeriodEnd   DateTime?     @map("current_period_end")
+  createdAt     DateTime           @default(now()) @map("created_at")
+  updatedAt     DateTime           @updatedAt @map("updated_at")
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("subscriptions")
+}
+
+enum SubscriptionPlan {
+  FREE
+  STARTER
+  PRO
+  ENTERPRISE
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  PAST_DUE
+  CANCELED
+  TRIALING
+}
+
+// ─── Social Accounts (TikTok, etc.) ──────────────────────────
+
+model SocialAccount {
+  id                    String           @id @default(cuid())
+  userId                String           @map("user_id")
+  provider              SocialProvider
+  providerAccountId    String           @map("provider_account_id")
+  username              String
+  displayName           String?          @map("display_name")
+  avatarUrl             String?          @map("avatar_url")
+  bio                   String?
+  followers             Int              @default(0)
+  following             Int              @default(0)
+  totalLikes            Int              @default(0) @map("total_likes")
+  totalVideos           Int              @default(0) @map("total_videos")
+  profileViews          Int              @default(0) @map("profile_views")
+  isProAccount          Boolean          @default(false) @map("is_pro_account")
+  isVerified            Boolean          @default(false) @map("is_verified")
+  accessToken           String?          @map("access_token")
+  refreshToken          String?          @map("refresh_token")
+  tokenExpiresAt        DateTime?        @map("token_expires_at")
+  refreshTokenExpiresAt DateTime?        @map("refresh_token_expires_at")
+  scopes                String?
+  connectedAt           DateTime         @default(now()) @map("connected_at")
+  updatedAt             DateTime         @updatedAt @map("updated_at")
+
+  // Relations
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  posts    Post[]
+  comments Comment[]
+
+  @@unique([provider, providerAccountId])
+  @@map("social_accounts")
+}
+
+enum SocialProvider {
+  TIKTOK
+  INSTAGRAM
+  YOUTUBE
+}
+
+// ─── Posts ───────────────────────────────────────────────────
+
+model Post {
+  id              String     @id @default(cuid())
+  userId          String     @map("user_id")
+  socialAccountId String?    @map("social_account_id")
+  title           String
+  content         String?
+  status          PostStatus @default(DRAFT)
+  platform        SocialProvider @default(TIKTOK)
+  scheduledDate   DateTime?  @map("scheduled_date")
+  publishedDate   DateTime?  @map("published_date")
+  externalId      String?    @map("external_id") // ID from TikTok after publishing
+  likes           Int        @default(0)
+  commentsCount   Int        @default(0) @map("comments_count")
+  shares          Int        @default(0)
+  views           Int        @default(0)
+  createdAt       DateTime   @default(now()) @map("created_at")
+  updatedAt       DateTime   @updatedAt @map("updated_at")
+
+  // Relations
+  user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  socialAccount SocialAccount? @relation(fields: [socialAccountId], references: [id], onDelete: SetNull)
+  comments      Comment[]
+
+  @@index([userId, status])
+  @@index([userId, scheduledDate])
+  @@map("posts")
+}
+
+enum PostStatus {
+  DRAFT
+  SCHEDULED
+  PUBLISHED
+  FAILED
+}
+
+// ─── Comments ────────────────────────────────────────────────
+
+model Comment {
+  id              String            @id @default(cuid())
+  userId          String            @map("user_id")
+  socialAccountId String?           @map("social_account_id")
+  postId          String?           @map("post_id")
+  externalId      String?           @map("external_id") // ID from TikTok
+  authorName      String            @map("author_name")
+  authorAvatar    String?           @map("author_avatar")
+  content         String
+  sentiment       CommentSentiment  @default(NEUTRAL)
+  replied         Boolean           @default(false)
+  repliedAt       DateTime?         @map("replied_at")
+  replyContent    String?           @map("reply_content")
+  createdAt       DateTime          @default(now()) @map("created_at")
+  updatedAt       DateTime          @updatedAt @map("updated_at")
+
+  // Relations
+  user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  socialAccount SocialAccount? @relation(fields: [socialAccountId], references: [id], onDelete: SetNull)
+  post          Post?          @relation(fields: [postId], references: [id], onDelete: SetNull)
+
+  @@index([userId, sentiment])
+  @@map("comments")
+}
+
+enum CommentSentiment {
+  POSITIVE
+  NEUTRAL
+  NEGATIVE
+}
+
+// ─── Automation Rules ────────────────────────────────────────
+
+model AutomationRule {
+  id          String           @id @default(cuid())
+  userId      String           @map("user_id")
+  name        String
+  description String?
+  trigger     String           // e.g. "new_positive_comment", "new_follower"
+  action      String           // e.g. "send_auto_reply", "send_welcome_dm"
+  config      Json?            // Flexible configuration for trigger/action parameters
+  status      AutomationStatus @default(ACTIVE)
+  runCount    Int              @default(0) @map("run_count")
+  lastRunAt   DateTime?        @map("last_run_at")
+  successRate Float            @default(100) @map("success_rate")
+  createdAt   DateTime         @default(now()) @map("created_at")
+  updatedAt   DateTime         @updatedAt @map("updated_at")
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, status])
+  @@map("automation_rules")
+}
+
+enum AutomationStatus {
+  ACTIVE
+  PAUSED
+  ERROR
+}
+
+// ─── Clients ─────────────────────────────────────────────────
+
+model Client {
+  id              String       @id @default(cuid())
+  userId          String       @map("user_id")
+  name            String
+  industry        String?
+  status          ClientStatus @default(ACTIVE)
+  followers       Int          @default(0)
+  engagementRate  Float?       @map("engagement_rate")
+  postsManaged    Int          @default(0) @map("posts_managed")
+  monthlyRevenue  Decimal?     @map("monthly_revenue") @db.Decimal(10, 2)
+  nextPostDate    DateTime?    @map("next_post_date")
+  notes           String?
+  createdAt       DateTime     @default(now()) @map("created_at")
+  updatedAt       DateTime     @updatedAt @map("updated_at")
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, status])
+  @@map("clients")
+}
+
+enum ClientStatus {
+  ACTIVE
+  PAUSED
+  PROSPECT
+  ARCHIVED
+}
+
+// ─── Notifications ───────────────────────────────────────────
+
+model Notification {
+  id        String           @id @default(cuid())
+  userId    String           @map("user_id")
+  type      NotificationType
+  title     String
+  message   String
+  read      Boolean          @default(false)
+  metadata  Json?            // Additional context data
+  createdAt DateTime         @default(now()) @map("created_at")
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, read])
+  @@map("notifications")
+}
+
+enum NotificationType {
+  POST_PUBLISHED
+  NEW_COMMENT
+  COMMENT_REPLIED
+  AUTOMATION_ALERT
+  MENTION
+  SYSTEM
+  BILLING
+}
