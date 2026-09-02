@@ -48,6 +48,7 @@ export async function updateSession(request: NextRequest) {
 
   const publicRoutes = ["/login", "/register", "/forgot-password", "/reset-password"];
   const isPublicRoute = publicRoutes.includes(pathname);
+  const isLegalPage = pathname === "/privacy-policy" || pathname === "/terms-of-service";
   const isAuthCallback = pathname.startsWith("/auth/");
   const isRoot = pathname === "/";
 
@@ -58,8 +59,8 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  // Allow public routes, auth callback, and root (landing page)
-  if (isPublicRoute || isAuthCallback || isRoot) {
+  // Allow public routes, auth callback, legal pages, and root (landing page)
+  if (isPublicRoute || isAuthCallback || isLegalPage || isRoot) {
     return supabaseResponse;
   }
 

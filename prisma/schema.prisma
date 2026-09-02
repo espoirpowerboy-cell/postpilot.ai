@@ -19,8 +19,10 @@ model User {
   avatarUrl       String?  @map("avatar_url")
   passwordHash    String?  @map("password_hash")
   role            UserRole @default(MEMBER)
-  createdAt       DateTime @default(now()) @map("created_at")
-  updatedAt       DateTime @updatedAt @map("updated_at")
+  acceptedPrivacyPolicyAt DateTime? @map("accepted_privacy_policy_at")
+  acceptedTermsAt         DateTime? @map("accepted_terms_at")
+  createdAt               DateTime   @default(now()) @map("created_at")
+  updatedAt               DateTime   @updatedAt @map("updated_at")
 
   // Relations
   subscription   Subscription?

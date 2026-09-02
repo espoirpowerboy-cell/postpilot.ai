@@ -656,8 +656,8 @@ function Footer() {
           <div className="flex items-center gap-6">
             <Link href="/login" className="text-xs text-muted hover:text-foreground transition-colors">Login</Link>
             <Link href="/register" className="text-xs text-muted hover:text-foreground transition-colors">Register</Link>
-            <a href="#" className="text-xs text-muted hover:text-foreground transition-colors">Privacy</a>
-            <a href="#" className="text-xs text-muted hover:text-foreground transition-colors">Terms</a>
+            <Link href="/privacy-policy" className="text-xs text-muted hover:text-foreground transition-colors">Privacy Policy</Link>
+            <Link href="/terms-of-service" className="text-xs text-muted hover:text-foreground transition-colors">Terms of Service</Link>
           </div>
         </div>
 
