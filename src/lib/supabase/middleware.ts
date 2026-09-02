@@ -58,8 +58,8 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  // Allow public routes and auth callback
-  if (isPublicRoute || isAuthCallback) {
+  // Allow public routes, auth callback, and root (landing page)
+  if (isPublicRoute || isAuthCallback || isRoot) {
     return supabaseResponse;
   }
 
