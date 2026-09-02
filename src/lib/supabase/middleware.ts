@@ -59,8 +59,9 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  // Allow public routes, auth callback, legal pages, and root (landing page)
-  if (isPublicRoute || isAuthCallback || isLegalPage || isRoot) {
+  // Allow public routes, auth callback, legal pages, root, and static .txt files
+  const isStaticFile = pathname.endsWith(".txt");
+  if (isPublicRoute || isAuthCallback || isLegalPage || isRoot || isStaticFile) {
     return supabaseResponse;
   }
 
