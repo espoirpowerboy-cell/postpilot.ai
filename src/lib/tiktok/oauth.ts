@@ -26,19 +26,19 @@ export interface TikTokTokenError {
 // ─── Config ──────────────────────────────────────────────────
 
 function getClientKey(): string {
-  const key = process.env.TIKTOK_CLIENT_KEY;
+  const key = process.env.TIKTOK_CLIENT_KEY?.trim();
   if (!key) throw new Error("TIKTOK_CLIENT_KEY is not configured");
   return key;
 }
 
 function getClientSecret(): string {
-  const secret = process.env.TIKTOK_CLIENT_SECRET;
+  const secret = process.env.TIKTOK_CLIENT_SECRET?.trim();
   if (!secret) throw new Error("TIKTOK_CLIENT_SECRET is not configured");
   return secret;
 }
 
 function getRedirectUri(): string {
-  const uri = process.env.TIKTOK_REDIRECT_URI;
+  const uri = process.env.TIKTOK_REDIRECT_URI?.trim();
   if (!uri) throw new Error("TIKTOK_REDIRECT_URI is not configured");
   return uri;
 }
