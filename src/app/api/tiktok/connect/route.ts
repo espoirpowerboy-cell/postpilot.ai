@@ -15,7 +15,7 @@ const TIKTOK_SCOPES = [
   "user.info.profile", // Username, bio, verified status
   "user.info.stats",  // Follower count, video count, etc.
   "video.list",       // List user's public videos
-  // "video.publish",  // Direct video posting — requires TikTok app approval
+  "video.publish",    // Direct video posting via Content Posting API
 ];
 
 const STATE_COOKIE = "tiktok_oauth_state";
