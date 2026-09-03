@@ -48,7 +48,7 @@ function getRedirectUri(): string {
 /**
  * Build the TikTok OAuth authorization URL.
  *
- * @param scopes - Space-separated list of scopes to request
+ * @param scopes - Array of scopes to request
  * @param state  - CSRF protection state token
  * @returns Full URL to redirect the user to
  */
@@ -56,7 +56,7 @@ export function buildAuthorizationUrl(scopes: string[], state: string): string {
   const params = new URLSearchParams({
     client_key: getClientKey(),
     response_type: "code",
-    scope: scopes.join(" "),
+    scope: scopes.join(","),
     redirect_uri: getRedirectUri(),
     state,
   });
