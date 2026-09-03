@@ -25,22 +25,30 @@ import {
 } from "lucide-react";
 import { useTheme } from "@/components/theme-provider";
 import DatabaseStatus from "@/components/database-status";
+import LanguageSwitcher from "@/components/language-switcher";
+import { useLanguage } from "@/lib/i18n/language-context";
 
-const navItems = [
-  { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-  { label: "Content Calendar", href: "/calendar", icon: Calendar },
-  { label: "Posts", href: "/posts", icon: FileText },
-  { label: "Comments Inbox", href: "/comments", icon: MessageSquare },
-  { label: "AI Assistant", href: "/ai-assistant", icon: Sparkles },
-  { label: "Automations", href: "/automations", icon: Zap },
-  { label: "Analytics", href: "/analytics", icon: BarChart3 },
-  { label: "Clients", href: "/clients", icon: Users },
-];
+function useNavItems() {
+  const { t } = useLanguage();
+  return [
+    { label: t("nav.dashboard"), href: "/dashboard", icon: LayoutDashboard },
+    { label: t("nav.calendar"), href: "/calendar", icon: Calendar },
+    { label: t("nav.posts"), href: "/posts", icon: FileText },
+    { label: t("nav.comments"), href: "/comments", icon: MessageSquare },
+    { label: t("nav.aiAssistant"), href: "/ai-assistant", icon: Sparkles },
+    { label: t("nav.automations"), href: "/automations", icon: Zap },
+    { label: t("nav.analytics"), href: "/analytics", icon: BarChart3 },
+    { label: t("nav.clients"), href: "/clients", icon: Users },
+  ];
+}
 
-const bottomItems = [
-  { label: "Connect TikTok", href: "/connect", icon: Link2 },
-  { label: "Settings", href: "/settings", icon: Settings },
-];
+function useBottomItems() {
+  const { t } = useLanguage();
+  return [
+    { label: t("nav.connect"), href: "/connect", icon: Link2 },
+    { label: t("nav.settings"), href: "/settings", icon: Settings },
+  ];
+}
 
 function getInitials(name: string | null | undefined, email: string | null | undefined): string {
   if (name) {
@@ -61,6 +69,9 @@ export default function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const { theme, toggleTheme } = useTheme();
+  const { t, language } = useLanguage();
+  const navItems = useNavItems();
+  const bottomItems = useBottomItems();
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(3);
@@ -236,6 +247,7 @@ export default function Sidebar() {
 
         {/* Bottom section */}
         <div className="border-t border-border px-3 py-3 space-y-2">
+          {!collapsed && <LanguageSwitcher />}
           <DatabaseStatus collapsed={collapsed} />
           <button
             onClick={toggleTheme}
@@ -244,7 +256,7 @@ export default function Sidebar() {
             title={collapsed ? (theme === "dark" ? "Light mode" : "Dark mode") : undefined}
           >
             {theme === "dark" ? <Sun className="h-4 w-4 shrink-0" /> : <Moon className="h-4 w-4 shrink-0" />}
-            {!collapsed && <span>{theme === "dark" ? "Light Mode" : "Dark Mode"}</span>}
+            {!collapsed && <span>{theme === "dark" ? (language === "fr" ? "Mode clair" : "Light Mode") : (language === "fr" ? "Mode sombre" : "Dark Mode")}</span>}
           </button>
 
           <button
@@ -253,12 +265,14 @@ export default function Sidebar() {
           >
             <Bell className="h-4 w-4 shrink-0" />
             {!collapsed && (
-              <span className="flex-1 text-left">Notifications</span>
-            )}
-            {!collapsed && unreadCount > 0 && (
-              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-accent text-[10px] font-bold text-white">
-                {unreadCount}
-              </span>
+              <>
+                <span className="flex-1 text-left">Notifications</span>
+                {unreadCount > 0 && (
+                  <span className="flex h-5 w-5 items-center justify-center rounded-full bg-accent text-[10px] font-bold text-white">
+                    {unreadCount}
+                  </span>
+                )}
+              </>
             )}
           </button>
 

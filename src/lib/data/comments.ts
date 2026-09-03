@@ -2,7 +2,6 @@
 
 import { prisma } from "@/lib/prisma";
 import { isDatabaseAvailable } from "./db";
-import { comments as mockComments } from "@/lib/mock-data";
 import type { Prisma } from "@prisma/client";
 
 export interface CommentData {
@@ -21,17 +20,7 @@ export async function getComments(
   filters?: { sentiment?: string; search?: string }
 ): Promise<CommentData[]> {
   if (!(await isDatabaseAvailable()) || !userId) {
-    let result = mockComments;
-    if (filters?.sentiment && filters.sentiment !== "all") {
-      result = result.filter((c) => c.sentiment === filters.sentiment);
-    }
-    if (filters?.search) {
-      const q = filters.search.toLowerCase();
-      result = result.filter(
-        (c) => c.content.toLowerCase().includes(q) || c.author.toLowerCase().includes(q)
-      );
-    }
-    return result;
+    return [];
   }
 
   const where: Prisma.CommentWhereInput = { userId };
@@ -56,7 +45,7 @@ export async function getComments(
 
 export async function getCommentById(id: string): Promise<CommentData | null> {
   if (!(await isDatabaseAvailable())) {
-    return mockComments.find((c) => c.id.toString() === id) ?? null;
+    return null;
   }
 
   const comment = await prisma.comment.findUnique({

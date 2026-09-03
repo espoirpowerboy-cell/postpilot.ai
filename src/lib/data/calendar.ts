@@ -2,7 +2,6 @@
 
 import { prisma } from "@/lib/prisma";
 import { isDatabaseAvailable } from "./db";
-import { calendarEvents as mockEvents } from "@/lib/mock-data";
 
 export interface CalendarEvent {
   id: number;
@@ -16,7 +15,7 @@ export interface CalendarEvent {
 
 export async function getCalendarEvents(userId?: string): Promise<CalendarEvent[]> {
   if (!(await isDatabaseAvailable()) || !userId) {
-    return mockEvents;
+    return [];
   }
 
   const posts = await prisma.post.findMany({

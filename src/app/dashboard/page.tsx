@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import DashboardLayout from "@/components/dashboard-layout";
 import PageHeader from "@/components/page-header";
 import StatCard from "@/components/stat-card";
-import { stats as fallbackStats, recentActivity as fallbackActivity } from "@/lib/mock-data";
+import { useLanguage } from "@/lib/i18n/language-context";
 import {
   Calendar,
   FileText,
@@ -14,6 +14,8 @@ import {
   Zap,
   BarChart3,
   TrendingUp,
+  Inbox,
+  Link2,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -32,14 +34,21 @@ interface ActivityItem {
   status: "success" | "info" | "error";
 }
 
-const quickActions = [
-  { label: "Schedule Post", href: "/calendar", icon: Calendar, color: "bg-accent" },
-  { label: "Write with AI", href: "/ai-assistant", icon: Sparkles, color: "bg-purple-500" },
-  { label: "View Analytics", href: "/analytics", icon: BarChart3, color: "bg-emerald-500" },
-  { label: "Reply to Comments", href: "/comments", icon: MessageSquare, color: "bg-amber-500" },
-];
+const statusIcons: Record<string, React.ReactNode> = {
+  post: <FileText className="h-4 w-4" />,
+  comment: <MessageSquare className="h-4 w-4" />,
+  automation: <Zap className="h-4 w-4" />,
+  error: <Zap className="h-4 w-4" />,
+  client: <BarChart3 className="h-4 w-4" />,
+};
 
-function MiniChart() {
+const statusColors: Record<string, string> = {
+  success: "bg-success/10 text-success",
+  info: "bg-info/10 text-info",
+  error: "bg-danger/10 text-danger",
+};
+
+function MiniChart({ totalViews }: { totalViews: string }) {
   const points = [40, 55, 35, 70, 45, 85, 60, 75, 50, 90, 65, 80];
   const width = 400;
   const height = 120;
@@ -62,11 +71,11 @@ function MiniChart() {
       <div className="flex items-center justify-between mb-4">
         <div>
           <h3 className="text-sm font-medium text-muted">Views Over Time</h3>
-          <p className="text-2xl font-bold mt-1">3.2M</p>
+          <p className="text-2xl font-bold mt-1">{totalViews}</p>
         </div>
         <div className="flex items-center gap-1 text-success text-sm font-medium">
           <TrendingUp className="h-4 w-4" />
-          <span>+18.2%</span>
+          <span>—</span>
         </div>
       </div>
       <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-24">
@@ -79,47 +88,27 @@ function MiniChart() {
         <path d={areaPath} fill="url(#chartGrad)" />
         <path d={linePath} fill="none" stroke="var(--accent)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
       </svg>
-      <div className="flex justify-between mt-2 text-xs text-muted">
-        <span>Aug 26</span>
-        <span>Sep 1</span>
-      </div>
-    </div>
-  );
-}
-
-function EngagementBreakdown() {
-  const items = [
-    { label: "Likes", value: "125.4K", width: "65%", color: "bg-accent" },
-    { label: "Comments", value: "3,672", width: "12%", color: "bg-emerald-500" },
-    { label: "Shares", value: "9,890", width: "23%", color: "bg-amber-500" },
-  ];
-
-  return (
-    <div className="rounded-xl border border-border bg-card p-6">
-      <h3 className="text-sm font-medium text-muted mb-4">Engagement Breakdown</h3>
-      <div className="space-y-4">
-        {items.map((item) => (
-          <div key={item.label}>
-            <div className="flex items-center justify-between text-sm mb-1.5">
-              <span className="font-medium">{item.label}</span>
-              <span className="text-muted">{item.value}</span>
-            </div>
-            <div className="h-2 rounded-full bg-border overflow-hidden">
-              <div className={`h-full rounded-full ${item.color} transition-all duration-500`} style={{ width: item.width }} />
-            </div>
-          </div>
-        ))}
-      </div>
     </div>
   );
 }
 
 function ScheduledPosts() {
-  const posts = [
-    { title: "Behind the Scenes Reel", time: "Tomorrow, 2:00 PM", type: "Reel" },
-    { title: "Q&A Response Video", time: "Sep 3, 11:00 AM", type: "Video" },
-    { title: "Trend Challenge", time: "Sep 4, 3:00 PM", type: "Video" },
-  ];
+  const [posts, setPosts] = useState<{ title: string; time: string; type: string }[]>([]);
+
+  useEffect(() => {
+    async function fetchPosts() {
+      try {
+        const res = await fetch("/api/posts?status=scheduled");
+        if (res.ok) {
+          const data = await res.json();
+          setPosts(data.posts?.slice(0, 3) ?? []);
+        }
+      } catch {
+        // Keep empty
+      }
+    }
+    fetchPosts();
+  }, []);
 
   return (
     <div className="rounded-xl border border-border bg-card p-6">
@@ -129,43 +118,37 @@ function ScheduledPosts() {
           View all <ArrowRight className="h-3 w-3" />
         </Link>
       </div>
-      <div className="space-y-3">
-        {posts.map((post, i) => (
-          <div key={i} className="flex items-center justify-between rounded-lg border border-border px-4 py-3">
-            <div className="flex items-center gap-3">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-accent/10">
-                <FileText className="h-4 w-4 text-accent" />
+      {posts.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-8 text-center">
+          <FileText className="h-8 w-8 text-muted mb-2" />
+          <p className="text-sm text-muted">No upcoming posts</p>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {posts.map((post, i) => (
+            <div key={i} className="flex items-center justify-between rounded-lg border border-border px-4 py-3">
+              <div className="flex items-center gap-3">
+                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-accent/10">
+                  <FileText className="h-4 w-4 text-accent" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium">{post.title}</p>
+                  <p className="text-xs text-muted">{post.time}</p>
+                </div>
               </div>
-              <div>
-                <p className="text-sm font-medium">{post.title}</p>
-                <p className="text-xs text-muted">{post.time}</p>
-              </div>
+              <span className="text-xs font-medium text-muted bg-sidebar-hover rounded-full px-2.5 py-1">{post.type}</span>
             </div>
-            <span className="text-xs font-medium text-muted bg-sidebar-hover rounded-full px-2.5 py-1">{post.type}</span>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
 
-const statusIcons: Record<string, React.ReactNode> = {
-  post: <FileText className="h-4 w-4" />,
-  comment: <MessageSquare className="h-4 w-4" />,
-  automation: <Zap className="h-4 w-4" />,
-  error: <Zap className="h-4 w-4" />,
-  client: <BarChart3 className="h-4 w-4" />,
-};
-
-const statusColors: Record<string, string> = {
-  success: "bg-success/10 text-success",
-  info: "bg-info/10 text-info",
-  error: "bg-danger/10 text-danger",
-};
-
 export default function DashboardPage() {
-  const [stats, setStats] = useState<DashboardStat[]>(fallbackStats);
-  const [activity, setActivity] = useState<ActivityItem[]>(fallbackActivity);
+  const { t } = useLanguage();
+  const [stats, setStats] = useState<DashboardStat[]>([]);
+  const [activity, setActivity] = useState<ActivityItem[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -178,7 +161,7 @@ export default function DashboardPage() {
           setActivity(data.activity);
         }
       } catch {
-        // Keep fallback data
+        // Keep empty state
       } finally {
         setLoading(false);
       }
@@ -186,11 +169,20 @@ export default function DashboardPage() {
     fetchData();
   }, []);
 
+  const quickActions = [
+    { label: t("dashboard.schedulePost"), href: "/calendar", icon: Calendar, color: "bg-accent" },
+    { label: t("dashboard.writeWithAI"), href: "/ai-assistant", icon: Sparkles, color: "bg-purple-500" },
+    { label: t("dashboard.viewAnalytics"), href: "/analytics", icon: BarChart3, color: "bg-emerald-500" },
+    { label: t("dashboard.replyToComments"), href: "/comments", icon: MessageSquare, color: "bg-amber-500" },
+  ];
+
+  const totalViews = stats.find((s) => s.label === "Total Views")?.value ?? "0";
+
   return (
     <DashboardLayout>
       <PageHeader
-        title="Dashboard"
-        description="Welcome back, Alex. Here's what's happening with your content."
+        title={t("dashboard.title")}
+        description={t("dashboard.welcome")}
       />
 
       {/* Stats */}
@@ -221,33 +213,52 @@ export default function DashboardPage() {
         ))}
       </div>
 
+      {/* Connect TikTok CTA if no data */}
+      {!loading && stats.every((s) => s.value === "0") && (
+        <div className="rounded-xl border border-dashed border-accent/30 bg-accent/5 p-8 mb-8 text-center">
+          <Link2 className="h-10 w-10 text-accent mx-auto mb-3" />
+          <h3 className="text-lg font-semibold mb-2">{t("dashboard.connectTikTok")}</h3>
+          <p className="text-sm text-muted mb-4">{t("connect.notConnectedDesc")}</p>
+          <Link
+            href="/connect"
+            className="inline-flex items-center gap-2 rounded-xl bg-accent px-5 py-2.5 text-sm font-semibold text-white hover:bg-accent-hover transition-colors"
+          >
+            {t("connect.connectButton")}
+          </Link>
+        </div>
+      )}
+
       {/* Main content grid */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3 mb-8">
         <div className="lg:col-span-2">
-          <MiniChart />
-        </div>
-        <div>
-          <EngagementBreakdown />
+          <MiniChart totalViews={totalViews} />
         </div>
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         {/* Recent Activity */}
         <div className="rounded-xl border border-border bg-card p-6">
-          <h3 className="text-sm font-medium text-muted mb-4">Recent Activity</h3>
-          <div className="space-y-3">
-            {activity.map((item) => (
-              <div key={item.id} className="flex items-start gap-3">
-                <div className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${statusColors[item.status]}`}>
-                  {statusIcons[item.type]}
+          <h3 className="text-sm font-medium text-muted mb-4">{t("dashboard.recentActivity")}</h3>
+          {activity.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-8 text-center">
+              <Inbox className="h-8 w-8 text-muted mb-2" />
+              <p className="text-sm text-muted">{t("dashboard.noActivity")}</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {activity.map((item) => (
+                <div key={item.id} className="flex items-start gap-3">
+                  <div className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${statusColors[item.status]}`}>
+                    {statusIcons[item.type]}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm">{item.message}</p>
+                    <p className="text-xs text-muted mt-0.5">{item.time}</p>
+                  </div>
                 </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm">{item.message}</p>
-                  <p className="text-xs text-muted mt-0.5">{item.time}</p>
-                </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Scheduled Posts */}

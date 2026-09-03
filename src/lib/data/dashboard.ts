@@ -2,7 +2,6 @@
 
 import { prisma } from "@/lib/prisma";
 import { isDatabaseAvailable } from "./db";
-import { stats as mockStats, recentActivity as mockActivity } from "@/lib/mock-data";
 
 export interface DashboardStat {
   label: string;
@@ -21,40 +20,42 @@ export interface ActivityItem {
 
 export async function getDashboardStats(userId?: string): Promise<DashboardStat[]> {
   if (!(await isDatabaseAvailable()) || !userId) {
-    return mockStats;
+    return [
+      { label: "Total Posts", value: "0", change: "—", trend: "up" },
+      { label: "Total Views", value: "0", change: "—", trend: "up" },
+      { label: "Total Comments", value: "0", change: "—", trend: "up" },
+      { label: "Followers", value: "0", change: "—", trend: "up" },
+    ];
   }
 
   const [totalPosts, totalViews, totalComments, account] = await Promise.all([
     prisma.post.count({ where: { userId } }),
     prisma.post.aggregate({ where: { userId }, _sum: { views: true } }),
     prisma.comment.count({ where: { userId } }),
-    prisma.socialAccount.findFirst({ where: { userId } }),
+    prisma.socialAccount.findFirst({ where: { userId, provider: "TIKTOK" } }),
   ]);
 
   const totalViewsValue = totalViews._sum.views ?? 0;
   const followersGained = account?.followers ?? 0;
 
   return [
-    { label: "Total Posts", value: totalPosts.toLocaleString(), change: "+12.5%", trend: "up" },
-    { label: "Total Views", value: formatLargeNumber(totalViewsValue), change: "+18.2%", trend: "up" },
-    { label: "Total Comments", value: totalComments.toLocaleString(), change: "+0.3%", trend: "up" },
-    { label: "Followers", value: formatLargeNumber(followersGained), change: "+7.1%", trend: "up" },
+    { label: "Total Posts", value: totalPosts.toLocaleString(), change: totalPosts > 0 ? "+" + totalPosts : "0", trend: "up" },
+    { label: "Total Views", value: formatLargeNumber(totalViewsValue), change: totalViewsValue > 0 ? "+" + formatLargeNumber(totalViewsValue) : "0", trend: "up" },
+    { label: "Total Comments", value: totalComments.toLocaleString(), change: totalComments > 0 ? "+" + totalComments : "0", trend: "up" },
+    { label: "Followers", value: formatLargeNumber(followersGained), change: followersGained > 0 ? "+" + formatLargeNumber(followersGained) : "0", trend: "up" },
   ];
 }
 
 export async function getRecentActivity(userId?: string): Promise<ActivityItem[]> {
   if (!(await isDatabaseAvailable()) || !userId) {
-    return mockActivity;
+    return [];
   }
 
-  // Fetch recent notifications as activity feed
   const notifications = await prisma.notification.findMany({
     where: { userId },
     orderBy: { createdAt: "desc" },
     take: 6,
   });
-
-  if (notifications.length === 0) return mockActivity;
 
   return notifications.map((n, i) => ({
     id: i + 1,

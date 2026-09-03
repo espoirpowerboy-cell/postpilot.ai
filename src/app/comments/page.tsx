@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import DashboardLayout from "@/components/dashboard-layout";
 import PageHeader from "@/components/page-header";
-import { comments as fallbackComments } from "@/lib/mock-data";
+import { useLanguage } from "@/lib/i18n/language-context";
 import {
   Search,
   Smile,
@@ -41,10 +41,11 @@ const sentimentBorder: Record<string, string> = {
 };
 
 export default function CommentsPage() {
+  const { t } = useLanguage();
   const [filter, setFilter] = useState<SentimentFilter>("all");
   const [selected, setSelected] = useState<number | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
-  const [comments, setComments] = useState<CommentData[]>(fallbackComments);
+  const [comments, setComments] = useState<CommentData[]>([]);
 
   useEffect(() => {
     async function fetchComments() {
@@ -58,14 +59,13 @@ export default function CommentsPage() {
           setComments(data.comments);
         }
       } catch {
-        // Keep fallback data
+        // Keep empty
       }
     }
     fetchComments();
   }, [filter, searchQuery]);
 
   const filtered = comments;
-
   const selectedComment = comments.find((c) => c.id === selected);
 
   const counts = {
@@ -78,8 +78,8 @@ export default function CommentsPage() {
   return (
     <DashboardLayout>
       <PageHeader
-        title="Comments Inbox"
-        description="Manage and respond to comments across your posts."
+        title={t("comments.title")}
+        description={t("comments.description")}
       />
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_380px]">
@@ -97,7 +97,7 @@ export default function CommentsPage() {
                   }`}
                 >
                   {f !== "all" && sentimentIcons[f]}
-                  {f} ({counts[f]})
+                  {t(`comments.${f}` as keyof typeof t)} ({counts[f]})
                 </button>
               ))}
             </div>
@@ -105,7 +105,7 @@ export default function CommentsPage() {
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
               <input
                 type="text"
-                placeholder="Search comments..."
+                placeholder={t("comments.searchPlaceholder")}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full rounded-lg border border-border bg-card pl-10 pr-4 py-2 text-sm placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-ring sm:w-64"
@@ -120,8 +120,8 @@ export default function CommentsPage() {
                 <div className="flex h-12 w-12 items-center justify-center rounded-full bg-accent/10">
                   <Inbox className="h-6 w-6 text-accent" />
                 </div>
-                <h3 className="mt-4 text-lg font-semibold">All caught up!</h3>
-                <p className="mt-1 text-sm text-muted">No comments match your filter.</p>
+                <h3 className="mt-4 text-lg font-semibold">{comments.length === 0 ? t("comments.allCaughtUp") : t("comments.noComments")}</h3>
+                <p className="mt-1 text-sm text-muted">{t("comments.noCommentsYet")}</p>
               </div>
             ) : (
               filtered.map((comment) => (
@@ -153,7 +153,7 @@ export default function CommentsPage() {
                       </div>
                       <p className="text-sm text-muted mt-1 line-clamp-2">{comment.content}</p>
                       <p className="text-xs text-muted mt-2">
-                        on <span className="font-medium text-foreground/70">{comment.post}</span>
+                        {t("comments.commentedOn")} <span className="font-medium text-foreground/70">{comment.post}</span>
                       </p>
                     </div>
                   </div>
@@ -185,29 +185,29 @@ export default function CommentsPage() {
                 <div className="rounded-lg bg-sidebar-hover/50 p-4 mb-4">
                   <p className="text-sm">{selectedComment.content}</p>
                   <p className="text-xs text-muted mt-3">
-                    Commented on <span className="font-medium">{selectedComment.post}</span>
+                    {t("comments.commentedOn")} <span className="font-medium">{selectedComment.post}</span>
                   </p>
                 </div>
 
                 {selectedComment.replied ? (
                   <div className="flex items-center gap-2 rounded-lg bg-success/5 border border-success/20 p-3 text-sm text-success">
                     <CheckCheck className="h-4 w-4" />
-                    <span>Reply sent</span>
+                    <span>{t("comments.replySent")}</span>
                   </div>
                 ) : (
                   <div>
                     <textarea
-                      placeholder="Write a reply..."
+                      placeholder={t("comments.writeReply")}
                       className="w-full rounded-lg border border-border bg-card px-4 py-3 text-sm placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-ring resize-none"
                       rows={3}
                     />
                     <div className="flex items-center justify-between mt-3">
                       <button className="text-xs text-muted hover:text-foreground transition-colors">
-                        Use AI Reply
+                        {t("comments.useAIReply")}
                       </button>
                       <button className="inline-flex items-center gap-2 rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-white hover:bg-accent-hover transition-colors">
                         <Reply className="h-4 w-4" />
-                        Reply
+                        {t("comments.reply")}
                       </button>
                     </div>
                   </div>
@@ -216,7 +216,7 @@ export default function CommentsPage() {
             ) : (
               <div className="flex flex-col items-center justify-center py-20 px-6 text-center">
                 <MessageSquare className="h-8 w-8 text-muted mb-3" />
-                <p className="text-sm font-medium text-muted">Select a comment to view details</p>
+                <p className="text-sm font-medium text-muted">{t("comments.selectComment")}</p>
               </div>
             )}
           </div>

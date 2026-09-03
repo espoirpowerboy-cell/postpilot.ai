@@ -1,21 +1,20 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import DashboardLayout from "@/components/dashboard-layout";
 import PageHeader from "@/components/page-header";
-import EmptyState from "@/components/empty-state";
-import { posts as fallbackPosts } from "@/lib/mock-data";
+import { useLanguage } from "@/lib/i18n/language-context";
 import {
-  Plus,
   Search,
+  FileText,
   Heart,
-  MessageCircle,
+  MessageSquare,
   Share2,
   Eye,
-  MoreHorizontal,
-  FileText,
-  Calendar,
+  Inbox,
+  Link2,
 } from "lucide-react";
+import Link from "next/link";
 
 type StatusFilter = "all" | "published" | "scheduled" | "draft";
 
@@ -30,25 +29,19 @@ interface PostData {
   comments: number;
   shares: number;
   views: number;
-  thumbnail: null;
 }
 
-const statusStyles: Record<string, string> = {
+const statusColors: Record<string, string> = {
   published: "bg-success/10 text-success",
   scheduled: "bg-info/10 text-info",
   draft: "bg-warning/10 text-warning",
 };
 
-function formatNumber(n: number) {
-  if (n >= 1000000) return `${(n / 1000000).toFixed(1)}M`;
-  if (n >= 1000) return `${(n / 1000).toFixed(1)}K`;
-  return n.toString();
-}
-
 export default function PostsPage() {
+  const { t } = useLanguage();
   const [filter, setFilter] = useState<StatusFilter>("all");
   const [searchQuery, setSearchQuery] = useState("");
-  const [posts, setPosts] = useState<PostData[]>(fallbackPosts);
+  const [posts, setPosts] = useState<PostData[]>([]);
 
   useEffect(() => {
     async function fetchPosts() {
@@ -62,36 +55,26 @@ export default function PostsPage() {
           setPosts(data.posts);
         }
       } catch {
-        // Keep fallback data
+        // Keep empty
       }
     }
     fetchPosts();
   }, [filter, searchQuery]);
 
-  const filtered = posts;
-
-  const counts = {
-    all: posts.length,
-    published: posts.filter((p) => p.status === "published").length,
-    scheduled: posts.filter((p) => p.status === "scheduled").length,
-    draft: posts.filter((p) => p.status === "draft").length,
-  };
-
   return (
     <DashboardLayout>
       <PageHeader
-        title="Posts"
-        description="Manage all your content in one place."
+        title={t("posts.title")}
+        description={t("posts.description")}
         actions={
-          <button className="inline-flex items-center gap-2 rounded-lg bg-accent px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-accent-hover transition-colors">
-            <Plus className="h-4 w-4" />
-            Create Post
+          <button className="inline-flex items-center gap-2 rounded-lg bg-accent px-4 py-2.5 text-sm font-semibold text-white hover:bg-accent-hover transition-colors">
+            {t("posts.newPost")}
           </button>
         }
       />
 
       {/* Filters */}
-      <div className="flex flex-col gap-4 mb-6 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-3 mb-6 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex rounded-lg border border-border overflow-hidden">
           {(["all", "published", "scheduled", "draft"] as StatusFilter[]).map((f) => (
             <button
@@ -101,7 +84,7 @@ export default function PostsPage() {
                 filter === f ? "bg-accent text-white" : "text-muted hover:bg-sidebar-hover"
               }`}
             >
-              {f} ({counts[f]})
+              {t(`posts.${f}` as keyof typeof t)}
             </button>
           ))}
         </div>
@@ -109,7 +92,7 @@ export default function PostsPage() {
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
           <input
             type="text"
-            placeholder="Search posts..."
+            placeholder={t("posts.searchPlaceholder")}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full rounded-lg border border-border bg-card pl-10 pr-4 py-2 text-sm placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-ring sm:w-64"
@@ -117,66 +100,45 @@ export default function PostsPage() {
         </div>
       </div>
 
-      {/* Posts Grid */}
-      {filtered.length === 0 ? (
-        <EmptyState
-          icon={FileText}
-          title="No posts found"
-          description={filter === "all" ? "Create your first post to get started." : `No ${filter} posts found. Try a different filter.`}
-          action={
-            <button className="inline-flex items-center gap-2 rounded-lg bg-accent px-4 py-2.5 text-sm font-semibold text-white hover:bg-accent-hover transition-colors">
-              <Plus className="h-4 w-4" /> Create Post
-            </button>
-          }
-        />
+      {/* Posts grid */}
+      {posts.length === 0 ? (
+        <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-border py-16 px-8 text-center">
+          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-accent/10">
+            <FileText className="h-6 w-6 text-accent" />
+          </div>
+          <h3 className="mt-4 text-lg font-semibold">{t("posts.noPosts")}</h3>
+          <p className="mt-1 text-sm text-muted mb-4">{t("connect.notConnectedDesc")}</p>
+          <Link
+            href="/connect"
+            className="inline-flex items-center gap-2 rounded-xl bg-accent px-5 py-2.5 text-sm font-semibold text-white hover:bg-accent-hover transition-colors"
+          >
+            <Link2 className="h-4 w-4" />
+            {t("connect.connectButton")}
+          </Link>
+        </div>
       ) : (
-        <div className="space-y-4">
-          {filtered.map((post) => (
-            <div
-              key={post.id}
-              className="group rounded-xl border border-border bg-card p-6 transition-all hover:shadow-md hover:border-accent/20"
-            >
-              <div className="flex items-start justify-between gap-4">
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-3 mb-2">
-                    <span className={`text-xs font-semibold rounded-full px-2.5 py-1 uppercase tracking-wider ${statusStyles[post.status]}`}>
-                      {post.status}
-                    </span>
-                    <span className="text-xs text-muted">{post.platform}</span>
-                    {post.scheduledDate && (
-                      <span className="flex items-center gap-1 text-xs text-muted">
-                        <Calendar className="h-3 w-3" />
-                        {new Date(post.scheduledDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
-                      </span>
-                    )}
-                  </div>
-                  <h3 className="text-lg font-semibold mb-1 group-hover:text-accent transition-colors">{post.title}</h3>
-                  <p className="text-sm text-muted line-clamp-2">{post.content}</p>
-                </div>
-                <button className="rounded-lg p-2 text-muted hover:bg-sidebar-hover hover:text-foreground transition-colors opacity-0 group-hover:opacity-100">
-                  <MoreHorizontal className="h-5 w-5" />
-                </button>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {posts.map((post) => (
+            <div key={post.id} className="rounded-xl border border-border bg-card p-5 transition-all hover:shadow-sm">
+              <div className="flex items-start justify-between mb-3">
+                <h3 className="text-sm font-semibold line-clamp-2">{post.title}</h3>
+                <span className={`shrink-0 rounded-full px-2.5 py-0.5 text-xs font-medium ${statusColors[post.status]}`}>
+                  {t(`posts.${post.status}` as keyof typeof t)}
+                </span>
               </div>
-
-              {post.status === "published" && (
-                <div className="mt-4 flex items-center gap-6 border-t border-border pt-4">
-                  <div className="flex items-center gap-1.5 text-sm text-muted">
-                    <Eye className="h-4 w-4" />
-                    <span className="font-medium">{formatNumber(post.views)}</span>
-                  </div>
-                  <div className="flex items-center gap-1.5 text-sm text-muted">
-                    <Heart className="h-4 w-4" />
-                    <span className="font-medium">{formatNumber(post.likes)}</span>
-                  </div>
-                  <div className="flex items-center gap-1.5 text-sm text-muted">
-                    <MessageCircle className="h-4 w-4" />
-                    <span className="font-medium">{formatNumber(post.comments)}</span>
-                  </div>
-                  <div className="flex items-center gap-1.5 text-sm text-muted">
-                    <Share2 className="h-4 w-4" />
-                    <span className="font-medium">{formatNumber(post.shares)}</span>
-                  </div>
-                </div>
+              {post.content && (
+                <p className="text-xs text-muted line-clamp-2 mb-3">{post.content}</p>
+              )}
+              <div className="flex items-center gap-4 text-xs text-muted">
+                <span className="flex items-center gap-1"><Eye className="h-3.5 w-3.5" /> {post.views.toLocaleString()}</span>
+                <span className="flex items-center gap-1"><Heart className="h-3.5 w-3.5" /> {post.likes.toLocaleString()}</span>
+                <span className="flex items-center gap-1"><MessageSquare className="h-3.5 w-3.5" /> {post.comments}</span>
+                <span className="flex items-center gap-1"><Share2 className="h-3.5 w-3.5" /> {post.shares}</span>
+              </div>
+              {post.scheduledDate && (
+                <p className="text-xs text-muted mt-3 pt-3 border-t border-border">
+                  {t("posts.scheduled")}: {post.scheduledDate}
+                </p>
               )}
             </div>
           ))}

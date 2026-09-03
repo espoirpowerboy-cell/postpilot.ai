@@ -23,6 +23,12 @@ export {
 } from "./content-posting";
 
 export {
+  syncTikTokProfile,
+  syncTikTokVideos,
+  fullTikTokSync,
+} from "./sync";
+
+export {
   getValidTikTokAccessToken,
   TikTokTokenExpiredError,
 } from "./token-manager";

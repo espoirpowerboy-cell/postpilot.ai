@@ -4,20 +4,19 @@ import { useState, useEffect } from "react";
 import DashboardLayout from "@/components/dashboard-layout";
 import PageHeader from "@/components/page-header";
 import StatCard from "@/components/stat-card";
-import { analyticsData as fallbackAnalytics, stats as fallbackStats } from "@/lib/mock-data";
+import { useLanguage } from "@/lib/i18n/language-context";
 import {
   Download,
   TrendingUp,
+  Link2,
 } from "lucide-react";
+import Link from "next/link";
 
 interface ViewsDataPoint { date: string; views: number; }
 interface EngagementData { type: string; count: number; percentage: number; }
 interface TopPostData { title: string; views: number; likes: number; engagement: string; }
 interface FollowersDataPoint { date: string; followers: number; }
-interface AgeDemographic { range: string; percentage: number; }
-interface GenderDemographic { type: string; percentage: number; }
-interface LocationDemographic { city: string; percentage: number; }
-interface AudienceDemographics { age: AgeDemographic[]; gender: GenderDemographic[]; topLocations: LocationDemographic[]; }
+interface AudienceDemographics { age: { range: string; percentage: number }[]; gender: { type: string; percentage: number }[]; topLocations: { city: string; percentage: number }[]; }
 
 interface AnalyticsOverview {
   viewsOverTime: ViewsDataPoint[];
@@ -27,7 +26,16 @@ interface AnalyticsOverview {
   demographics: AudienceDemographics;
 }
 
+interface DashboardStat {
+  label: string;
+  value: string;
+  change: string;
+  trend: "up" | "down";
+}
+
 function ViewsChart({ data }: { data: ViewsDataPoint[] }) {
+  if (data.length === 0) return null;
+
   const width = 800;
   const height = 200;
   const max = Math.max(...data.map((d) => d.views));
@@ -36,7 +44,7 @@ function ViewsChart({ data }: { data: ViewsDataPoint[] }) {
   const padding = { left: 0, right: 0, top: 10, bottom: 0 };
   const chartW = width - padding.left - padding.right;
   const chartH = height - padding.top - padding.bottom;
-  const step = chartW / (data.length - 1);
+  const step = chartW / (data.length - 1 || 1);
 
   const points = data.map((d, i) => {
     const x = padding.left + i * step;
@@ -47,23 +55,16 @@ function ViewsChart({ data }: { data: ViewsDataPoint[] }) {
   const linePath = `M${points.map((p) => `${p.x},${p.y}`).join(" L")}`;
   const areaPath = `${linePath} L${points[points.length - 1].x},${height} L${points[0].x},${height} Z`;
 
+  const totalViews = data.reduce((s, d) => s + d.views, 0);
+
   return (
     <div className="rounded-xl border border-border bg-card p-6">
       <div className="flex items-center justify-between mb-6">
         <div>
           <h3 className="text-sm font-medium text-muted">Views Over Time</h3>
           <div className="flex items-baseline gap-2 mt-1">
-            <p className="text-3xl font-bold">3.2M</p>
-            <span className="flex items-center gap-1 text-sm font-medium text-success">
-              <TrendingUp className="h-3.5 w-3.5" />
-              +18.2%
-            </span>
+            <p className="text-3xl font-bold">{totalViews >= 1000000 ? `${(totalViews / 1000000).toFixed(1)}M` : totalViews >= 1000 ? `${(totalViews / 1000).toFixed(1)}K` : totalViews.toLocaleString()}</p>
           </div>
-        </div>
-        <div className="flex rounded-lg border border-border overflow-hidden">
-          <button className="px-3 py-1.5 text-xs font-medium bg-accent text-white">7D</button>
-          <button className="px-3 py-1.5 text-xs font-medium text-muted hover:bg-sidebar-hover transition-colors">30D</button>
-          <button className="px-3 py-1.5 text-xs font-medium text-muted hover:bg-sidebar-hover transition-colors">90D</button>
         </div>
       </div>
       <svg viewBox={`0 0 ${width} ${height}`} className="w-full" preserveAspectRatio="none">
@@ -73,10 +74,6 @@ function ViewsChart({ data }: { data: ViewsDataPoint[] }) {
             <stop offset="100%" stopColor="var(--accent)" stopOpacity="0" />
           </linearGradient>
         </defs>
-        {[0, 0.25, 0.5, 0.75, 1].map((pct) => {
-          const y = padding.top + chartH * (1 - pct);
-          return <line key={pct} x1={padding.left} y1={y} x2={width - padding.right} y2={y} stroke="var(--border)" strokeWidth="1" strokeDasharray="4" />;
-        })}
         <path d={areaPath} fill="url(#areaGrad)" />
         <path d={linePath} fill="none" stroke="var(--accent)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
         {points.map((p, i) => (
@@ -95,8 +92,11 @@ function ViewsChart({ data }: { data: ViewsDataPoint[] }) {
 }
 
 function EngagementChart({ data }: { data: EngagementData[] }) {
+  if (data.length === 0) return null;
+
   const colors = ["bg-accent", "bg-emerald-500", "bg-amber-500"];
   const strokeColors = ["var(--accent)", "#10b981", "#f59e0b"];
+  const total = data.reduce((s, d) => s + d.count, 0);
 
   return (
     <div className="rounded-xl border border-border bg-card p-6">
@@ -110,24 +110,13 @@ function EngagementChart({ data }: { data: EngagementData[] }) {
               const dashArray = `${(d.percentage / 100) * circumference} ${circumference}`;
               const dashOffset = -((prev / 100) * circumference);
               return (
-                <circle
-                  key={i}
-                  cx="50"
-                  cy="50"
-                  r="38"
-                  fill="none"
-                  stroke={strokeColors[i]}
-                  strokeWidth="8"
-                  strokeDasharray={dashArray}
-                  strokeDashoffset={dashOffset}
-                  strokeLinecap="round"
-                />
+                <circle key={i} cx="50" cy="50" r="38" fill="none" stroke={strokeColors[i]} strokeWidth="8" strokeDasharray={dashArray} strokeDashoffset={dashOffset} strokeLinecap="round" />
               );
             })}
           </svg>
           <div className="absolute inset-0 flex items-center justify-center">
             <div className="text-center">
-              <p className="text-lg font-bold">139K</p>
+              <p className="text-lg font-bold">{total >= 1000 ? `${(total / 1000).toFixed(1)}K` : total}</p>
               <p className="text-[10px] text-muted">Total</p>
             </div>
           </div>
@@ -150,55 +139,9 @@ function EngagementChart({ data }: { data: EngagementData[] }) {
   );
 }
 
-function AudienceDemographics({ demographics }: { demographics: AudienceDemographics }) {
-  return (
-    <div className="rounded-xl border border-border bg-card p-6">
-      <h3 className="text-sm font-medium text-muted mb-4">Audience Demographics</h3>
-      <div className="space-y-6">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-wider text-muted mb-3">Age Range</p>
-          <div className="space-y-2">
-            {demographics.age.map((a) => (
-              <div key={a.range}>
-                <div className="flex items-center justify-between text-sm mb-1">
-                  <span className="text-muted">{a.range}</span>
-                  <span className="font-medium">{a.percentage}%</span>
-                </div>
-                <div className="h-2 rounded-full bg-border overflow-hidden">
-                  <div className="h-full rounded-full bg-accent transition-all duration-500" style={{ width: `${a.percentage}%` }} />
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-wider text-muted mb-3">Gender</p>
-          <div className="flex gap-3">
-            {demographics.gender.map((g) => (
-              <div key={g.type} className="flex-1 text-center rounded-lg border border-border p-3">
-                <p className="text-lg font-bold">{g.percentage}%</p>
-                <p className="text-xs text-muted">{g.type}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-wider text-muted mb-3">Top Locations</p>
-          <div className="space-y-2">
-            {demographics.topLocations.map((l) => (
-              <div key={l.city} className="flex items-center justify-between text-sm">
-                <span className="text-muted">{l.city}</span>
-                <span className="font-medium">{l.percentage}%</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 function TopPostsTable({ posts }: { posts: TopPostData[] }) {
+  if (posts.length === 0) return null;
+
   return (
     <div className="rounded-xl border border-border bg-card p-6">
       <h3 className="text-sm font-medium text-muted mb-4">Top Performing Posts</h3>
@@ -233,12 +176,14 @@ function TopPostsTable({ posts }: { posts: TopPostData[] }) {
 }
 
 function AudienceGrowthChart({ data }: { data: FollowersDataPoint[] }) {
+  if (data.length === 0) return null;
+
   const width = 400;
   const height = 150;
   const max = Math.max(...data.map((d) => d.followers));
   const min = Math.min(...data.map((d) => d.followers));
   const range = max - min || 1;
-  const step = width / (data.length - 1);
+  const step = width / (data.length - 1 || 1);
 
   const points = data.map((d, i) => ({
     x: i * step,
@@ -254,10 +199,9 @@ function AudienceGrowthChart({ data }: { data: FollowersDataPoint[] }) {
         <div>
           <h3 className="text-sm font-medium text-muted">Audience Growth</h3>
           <div className="flex items-baseline gap-2 mt-1">
-            <p className="text-2xl font-bold">57.8K</p>
+            <p className="text-2xl font-bold">{data[data.length - 1]?.followers.toLocaleString() ?? "0"}</p>
             <span className="flex items-center gap-1 text-sm font-medium text-success">
               <TrendingUp className="h-3.5 w-3.5" />
-              +12.8K
             </span>
           </div>
         </div>
@@ -282,62 +226,102 @@ function AudienceGrowthChart({ data }: { data: FollowersDataPoint[] }) {
 }
 
 export default function AnalyticsPage() {
-  const [analytics, setAnalytics] = useState<AnalyticsOverview>(fallbackAnalytics);
-  const [stats] = useState(fallbackStats);
+  const { t } = useLanguage();
+  const [analytics, setAnalytics] = useState<AnalyticsOverview>({
+    viewsOverTime: [],
+    engagementByType: [],
+    topPosts: [],
+    audienceGrowth: [],
+    demographics: { age: [], gender: [], topLocations: [] },
+  });
+  const [stats, setStats] = useState<DashboardStat[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function fetchAnalytics() {
       try {
-        const res = await fetch("/api/analytics");
-        if (res.ok) {
-          const data = await res.json();
+        const [analyticsRes, dashboardRes] = await Promise.all([
+          fetch("/api/analytics"),
+          fetch("/api/dashboard"),
+        ]);
+        if (analyticsRes.ok) {
+          const data = await analyticsRes.json();
           setAnalytics(data);
         }
+        if (dashboardRes.ok) {
+          const data = await dashboardRes.json();
+          setStats(data.stats);
+        }
       } catch {
-        // Keep fallback data
+        // Keep empty
+      } finally {
+        setLoading(false);
       }
     }
     fetchAnalytics();
   }, []);
 
+  const hasData = analytics.viewsOverTime.length > 0 || analytics.topPosts.length > 0;
+
   return (
     <DashboardLayout>
       <PageHeader
-        title="Analytics"
-        description="Track your content performance and audience growth."
+        title={t("analytics.title")}
+        description={t("analytics.description")}
         actions={
           <button className="inline-flex items-center gap-2 rounded-lg border border-border px-4 py-2.5 text-sm font-medium hover:bg-sidebar-hover transition-colors">
             <Download className="h-4 w-4" />
-            Export Report
+            {t("analytics.exportReport")}
           </button>
         }
       />
 
       {/* Stats */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 mb-8">
-        {stats.map((stat) => (
-          <StatCard key={stat.label} {...stat} />
-        ))}
-      </div>
+      {stats.length > 0 && (
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 mb-8">
+          {stats.map((stat) => (
+            <StatCard key={stat.label} {...stat} />
+          ))}
+        </div>
+      )}
+
+      {/* Empty state */}
+      {!loading && !hasData && (
+        <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-border py-16 px-8 text-center">
+          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-accent/10">
+            <TrendingUp className="h-6 w-6 text-accent" />
+          </div>
+          <h3 className="mt-4 text-lg font-semibold">{t("analytics.noData")}</h3>
+          <p className="mt-1 text-sm text-muted mb-4">{t("connect.notConnectedDesc")}</p>
+          <Link
+            href="/connect"
+            className="inline-flex items-center gap-2 rounded-xl bg-accent px-5 py-2.5 text-sm font-semibold text-white hover:bg-accent-hover transition-colors"
+          >
+            <Link2 className="h-4 w-4" />
+            {t("connect.connectButton")}
+          </Link>
+        </div>
+      )}
 
       {/* Charts grid */}
-      <div className="grid grid-cols-1 gap-6 mb-6">
-        <ViewsChart data={analytics.viewsOverTime} />
-      </div>
+      {hasData && (
+        <>
+          <div className="grid grid-cols-1 gap-6 mb-6">
+            <ViewsChart data={analytics.viewsOverTime} />
+          </div>
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3 mb-6">
-        <div className="lg:col-span-2">
-          <AudienceGrowthChart data={analytics.audienceGrowth} />
-        </div>
-        <div>
-          <EngagementChart data={analytics.engagementByType} />
-        </div>
-      </div>
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-3 mb-6">
+            <div className="lg:col-span-2">
+              <AudienceGrowthChart data={analytics.audienceGrowth} />
+            </div>
+            <div>
+              <EngagementChart data={analytics.engagementByType} />
+            </div>
+          </div>
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_320px]">
-        <TopPostsTable posts={analytics.topPosts} />
-        <AudienceDemographics demographics={analytics.demographics} />
-      </div>
+          <TopPostsTable posts={analytics.topPosts} />
+        </>
+      )}
     </DashboardLayout>
   );
 }

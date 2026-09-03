@@ -2,7 +2,6 @@
 
 import { prisma } from "@/lib/prisma";
 import { isDatabaseAvailable } from "./db";
-import { tiktokAccount as mockAccount } from "@/lib/mock-data";
 
 export interface SocialAccountData {
   id?: string;
@@ -23,7 +22,7 @@ export interface SocialAccountData {
 
 export async function getSocialAccount(userId?: string): Promise<SocialAccountData> {
   if (!(await isDatabaseAvailable()) || !userId) {
-    return { ...mockAccount, connected: false };
+    return getEmptyAccount();
   }
 
   const account = await prisma.socialAccount.findFirst({
@@ -31,11 +30,9 @@ export async function getSocialAccount(userId?: string): Promise<SocialAccountDa
   });
 
   if (!account) {
-    // No real TikTok account connected — return mock data with connected: false
-    return { ...mockAccount, connected: false };
+    return getEmptyAccount();
   }
 
-  // Real TikTok account found — return real data
   return {
     id: account.id,
     username: `@${account.username}`,
@@ -73,9 +70,6 @@ export async function getSocialAccounts(userId?: string) {
   });
 }
 
-/**
- * Check if a TikTok account is connected and tokens are present.
- */
 export async function isTikTokConnected(userId: string): Promise<boolean> {
   if (!(await isDatabaseAvailable()) || !userId) {
     return false;
@@ -87,4 +81,20 @@ export async function isTikTokConnected(userId: string): Promise<boolean> {
   });
 
   return !!(account?.accessToken);
+}
+
+function getEmptyAccount(): SocialAccountData {
+  return {
+    username: "",
+    displayName: "",
+    followers: 0,
+    following: 0,
+    likes: 0,
+    videos: 0,
+    verified: false,
+    bio: "",
+    profileViews: 0,
+    isProAccount: false,
+    connected: false,
+  };
 }

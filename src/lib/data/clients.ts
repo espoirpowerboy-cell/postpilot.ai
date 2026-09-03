@@ -2,7 +2,6 @@
 
 import { prisma } from "@/lib/prisma";
 import { isDatabaseAvailable } from "./db";
-import { clients as mockClients } from "@/lib/mock-data";
 
 export interface ClientData {
   id: number;
@@ -19,7 +18,7 @@ export interface ClientData {
 
 export async function getClients(userId?: string): Promise<ClientData[]> {
   if (!(await isDatabaseAvailable()) || !userId) {
-    return mockClients;
+    return [];
   }
 
   const dbClients = await prisma.client.findMany({
@@ -32,7 +31,7 @@ export async function getClients(userId?: string): Promise<ClientData[]> {
 
 export async function getClientById(id: string): Promise<ClientData | null> {
   if (!(await isDatabaseAvailable())) {
-    return mockClients.find((c) => c.id.toString() === id) ?? null;
+    return null;
   }
 
   const client = await prisma.client.findUnique({ where: { id } });

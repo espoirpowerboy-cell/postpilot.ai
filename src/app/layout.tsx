@@ -4,6 +4,7 @@ import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
 import AuthProvider from "@/components/auth-provider";
 import LegalConsentModal from "@/components/legal-consent-modal";
+import { LanguageProvider } from "@/lib/i18n/language-context";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -30,8 +31,10 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       <body className="min-h-full flex flex-col">
         <AuthProvider>
           <ThemeProvider>
-            {children}
-            <LegalConsentModal />
+            <LanguageProvider>
+              {children}
+              <LegalConsentModal />
+            </LanguageProvider>
           </ThemeProvider>
         </AuthProvider>
       </body>

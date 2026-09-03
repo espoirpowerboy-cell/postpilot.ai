@@ -2,7 +2,6 @@
 
 import { prisma } from "@/lib/prisma";
 import { isDatabaseAvailable } from "./db";
-import { automations as mockAutomations } from "@/lib/mock-data";
 
 export interface AutomationData {
   id: number;
@@ -18,7 +17,7 @@ export interface AutomationData {
 
 export async function getAutomations(userId?: string): Promise<AutomationData[]> {
   if (!(await isDatabaseAvailable()) || !userId) {
-    return mockAutomations;
+    return [];
   }
 
   const dbAutomations = await prisma.automationRule.findMany({
@@ -31,7 +30,7 @@ export async function getAutomations(userId?: string): Promise<AutomationData[]>
 
 export async function getAutomationById(id: string): Promise<AutomationData | null> {
   if (!(await isDatabaseAvailable())) {
-    return mockAutomations.find((a) => a.id.toString() === id) ?? null;
+    return null;
   }
 
   const automation = await prisma.automationRule.findUnique({ where: { id } });

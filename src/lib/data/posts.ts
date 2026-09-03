@@ -2,7 +2,6 @@
 
 import { prisma } from "@/lib/prisma";
 import { isDatabaseAvailable } from "./db";
-import { posts as mockPosts } from "@/lib/mock-data";
 import type { Prisma } from "@prisma/client";
 
 export interface PostData {
@@ -24,15 +23,7 @@ export async function getPosts(
   filters?: { status?: string; search?: string }
 ): Promise<PostData[]> {
   if (!(await isDatabaseAvailable()) || !userId) {
-    let result = mockPosts;
-    if (filters?.status && filters.status !== "all") {
-      result = result.filter((p) => p.status === filters.status);
-    }
-    if (filters?.search) {
-      const q = filters.search.toLowerCase();
-      result = result.filter((p) => p.title.toLowerCase().includes(q));
-    }
-    return result;
+    return [];
   }
 
   const where: Prisma.PostWhereInput = { userId };
@@ -53,7 +44,7 @@ export async function getPosts(
 
 export async function getScheduledPosts(userId?: string): Promise<PostData[]> {
   if (!(await isDatabaseAvailable()) || !userId) {
-    return mockPosts.filter((p) => p.status === "scheduled");
+    return [];
   }
 
   const dbPosts = await prisma.post.findMany({
@@ -67,7 +58,7 @@ export async function getScheduledPosts(userId?: string): Promise<PostData[]> {
 
 export async function getPostById(id: string): Promise<PostData | null> {
   if (!(await isDatabaseAvailable())) {
-    return mockPosts.find((p) => p.id.toString() === id) ?? null;
+    return null;
   }
 
   const post = await prisma.post.findUnique({ where: { id } });
@@ -125,7 +116,6 @@ function mapPost(post: { id: string; title: string; content: string | null; stat
   };
 }
 
-// Convert cuid to numeric id for UI compatibility
 function hashStringId(id: string): number {
   let hash = 0;
   for (let i = 0; i < id.length; i++) {
