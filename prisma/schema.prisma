@@ -129,6 +129,8 @@ model Post {
   scheduledDate   DateTime?  @map("scheduled_date")
   publishedDate   DateTime?  @map("published_date")
   externalId      String?    @map("external_id") // ID from TikTok after publishing
+  publishId       String?    @map("publish_id") // TikTok Content Posting publish_id for tracking
+  publishError    String?    @map("publish_error") // Last publish error message
   likes           Int        @default(0)
   commentsCount   Int        @default(0) @map("comments_count")
   shares          Int        @default(0)

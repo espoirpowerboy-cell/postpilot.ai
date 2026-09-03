@@ -61,7 +61,8 @@ export async function updateSession(request: NextRequest) {
 
   // Allow public routes, auth callback, legal pages, root, and static .txt files
   const isStaticFile = pathname.endsWith(".txt");
-  if (isPublicRoute || isAuthCallback || isLegalPage || isRoot || isStaticFile) {
+  const isCronRoute = pathname.startsWith("/api/cron/");
+  if (isPublicRoute || isAuthCallback || isLegalPage || isRoot || isStaticFile || isCronRoute) {
     return supabaseResponse;
   }
 
